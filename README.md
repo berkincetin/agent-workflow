@@ -23,12 +23,12 @@ A flexible platform for creating, managing, and executing AI agent workflows, al
 
 The project consists of two main components:
 
-### Frontend (`agent-workflow-frontend`)
+### Frontend (`ui`)
 - React-based UI with Material UI components
 - ReactFlow for workflow visualization and editing
 - Handles user interaction, workflow design, and result visualization
 
-### Backend (`agent-workflow-backend`)
+### Backend (`agents`)
 - FastAPI server providing REST endpoints
 - Agent simulation and management
 - Workflow execution and state tracking
@@ -39,7 +39,7 @@ The project consists of two main components:
 ### Backend Setup
 1. Navigate to the backend directory:
 ```bash
-cd agent-workflow-backend
+cd agents
 ```
 
 2. Install dependencies:
@@ -60,7 +60,7 @@ poetry run uvicorn src.main:app --reload --host 0.0.0.0 --port 8001
 ### Frontend Setup
 1. Navigate to the frontend directory:
 ```bash
-cd agent-workflow-frontend
+cd ui
 ```
 
 2. Install dependencies:
