@@ -92,7 +92,3 @@ npm start
 ## Contributing
 
 Contributions are welcome! Please feel free to submit pull requests or open issues to improve the system.
-
-## License
-
-MIT 
