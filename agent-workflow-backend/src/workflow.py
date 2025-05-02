@@ -89,6 +89,48 @@ def sort_workflow_nodes(
     return sorted_nodes
 
 
+def validate_workflow_structure(nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    İş akışı yapısını doğrular (START ile başlayıp END ile bitmeli).
+
+    Args:
+        nodes: İş akışı düğümleri
+
+    Returns:
+        Doğrulama sonucu: {"valid": bool, "message": str}
+    """
+    # Eğer düğüm yoksa geçersiz
+    if not nodes:
+        return {"valid": False, "message": "İş akışında düğüm bulunamadı"}
+
+    # İlk düğümün START olduğunu kontrol et
+    if nodes[0]["data"]["label"] != "START":
+        return {"valid": False, "message": "İş akışı START düğümü ile başlamalıdır"}
+
+    # Son düğümün END olduğunu kontrol et
+    if nodes[-1]["data"]["label"] != "END":
+        return {"valid": False, "message": "İş akışı END düğümü ile bitmelidir"}
+
+    # Hem START hem de END düğümlerinin sayısını kontrol et
+    start_count = sum(1 for node in nodes if node["data"]["label"] == "START")
+    end_count = sum(1 for node in nodes if node["data"]["label"] == "END")
+
+    if start_count != 1:
+        return {
+            "valid": False,
+            "message": f"İş akışında tek bir START düğümü olmalıdır, mevcut: {start_count}",
+        }
+
+    if end_count != 1:
+        return {
+            "valid": False,
+            "message": f"İş akışında tek bir END düğümü olmalıdır, mevcut: {end_count}",
+        }
+
+    # Tüm kontroller geçildi
+    return {"valid": True, "message": "İş akışı yapısı geçerli"}
+
+
 def process_workflow_node(
     node: Dict[str, Any],
     input_text: str,
@@ -202,6 +244,25 @@ def execute_workflow_pipeline(
                     {
                         "node_id": "error",
                         "agent_name": "Error",
+                        "output": error_msg,
+                        "processed_text": "",
+                    }
+                ],
+                "execution_time": 0,
+                "status": "failed",
+            }
+
+        # İş akışı yapısını doğrula (START ile başlayıp END ile bitmeli)
+        validation_result = validate_workflow_structure(sorted_nodes)
+        if not validation_result["valid"]:
+            error_msg = validation_result["message"]
+            logger.error(f"İş akışı yapı doğrulama hatası: {error_msg}")
+            return {
+                "workflow_id": workflow["id"],
+                "results": [
+                    {
+                        "node_id": "error",
+                        "agent_name": "Yapı Hatası",
                         "output": error_msg,
                         "processed_text": "",
                     }

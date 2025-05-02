@@ -56,7 +56,7 @@ DB["agents"] = get_default_agents()
 
 # Kimlik doğrulama işlevi
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    from agent_workflow_backend.src.auth import get_current_user as get_user
+    from src.auth import get_current_user as get_user
 
     return await get_user(token, DB)
 
@@ -178,8 +178,8 @@ async def create_workflow(workflow: WorkflowBase):
                     "id": workflow.id,
                     "name": workflow.name,
                     "description": workflow.description,
-                    "nodes": [node.model_dump() for node in workflow.nodes],
-                    "edges": [edge.model_dump() for edge in workflow.edges],
+                    "nodes": [node.dict() for node in workflow.nodes],
+                    "edges": [edge.dict() for edge in workflow.edges],
                     "user_id": wf.get("user_id", "demo_user"),
                     "created_at": wf["created_at"],
                     "updated_at": datetime.utcnow(),
@@ -195,21 +195,28 @@ async def create_workflow(workflow: WorkflowBase):
 
     # Yeni workflow oluştur
     workflow_id = str(uuid.uuid4())
-    new_workflow = {
-        "id": workflow_id,
-        "name": workflow.name,
-        "description": workflow.description,
-        "nodes": [node.model_dump() for node in workflow.nodes],
-        "edges": [edge.model_dump() for edge in workflow.edges],
-        "user_id": "demo_user",
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
-    }
+    try:
+        new_workflow = {
+            "id": workflow_id,
+            "name": workflow.name,
+            "description": workflow.description,
+            "nodes": [node.dict() for node in workflow.nodes],
+            "edges": [edge.dict() for edge in workflow.edges],
+            "user_id": "demo_user",
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
 
-    DB["workflows"].append(new_workflow)
-    logger.info(f"Yeni iş akışı oluşturuldu: {workflow.name}")
+        DB["workflows"].append(new_workflow)
+        logger.info(f"Yeni iş akışı oluşturuldu: {workflow.name}")
 
-    return new_workflow
+        return new_workflow
+    except Exception as e:
+        logger.error(f"İş akışı oluşturma hatası: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"İş akışı oluşturulamadı: {str(e)}",
+        )
 
 
 @app.get("/workflows")
