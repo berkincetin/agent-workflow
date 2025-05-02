@@ -2,7 +2,6 @@ import React, { createContext, useState, useEffect, useCallback, ReactNode } fro
 import { Snackbar, Alert } from '@mui/material';
 import { 
   AuthState, 
-  User, 
   SnackbarState, 
   Agent, 
   WorkflowData,
