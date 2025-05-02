@@ -22,7 +22,7 @@ coverage/
 .next/
 out/
 .nuxt/
-public/
+#public/
 
 # Output of 'npm pack'
 *.tgz
