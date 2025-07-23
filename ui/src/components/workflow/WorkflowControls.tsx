@@ -47,7 +47,7 @@ const WorkflowControls: React.FC<WorkflowControlsProps> = ({
         <Button 
           variant="outlined" 
           color="primary"
-          onClick={onAddAgentDialogOpen}
+          onClick={() => window.open('http://localhost:3001/add-agent', '_blank')}
         >
           Yeni Agent Oluştur
         </Button>
