@@ -2,13 +2,84 @@ from typing import Dict, List, Any, Union, Optional
 from datetime import datetime
 import time
 import uuid
+import requests
 from src.utils import logger
+
+
+# AI Agent App'den ajanları çeken fonksiyon
+def fetch_ai_agents_from_main_app() -> List[Dict[str, Any]]:
+    """
+    ai-agent-app-main projesinden ajanları çeker ve agent-workflow formatına dönüştürür.
+    
+    Returns:
+        List[Dict[str, Any]]: Dönüştürülmüş ajan listesi
+    """
+    ai_agents = []
+    
+    try:
+        # ai-agent-app-main'in Next.js API endpoint'ini çağır (Frontend'deki API route)
+        logger.info("AI Agent App'e bağlanmaya çalışılıyor: http://localhost:3001/api/agents")
+        response = requests.get("http://localhost:3001/api/agents", timeout=10)
+        
+        logger.info(f"AI Agent App yanıtı - Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            agents_data = response.json()
+            logger.info(f"AI Agent App'den başarıyla {len(agents_data)} ajan çekildi")
+            
+            # İlk ajanın yapısını loglayalım (debug için)
+            if agents_data and len(agents_data) > 0:
+                logger.info(f"İlk ajan örneği: {list(agents_data[0].keys())}")
+            
+            # Her ajanı agent-workflow formatına dönüştür
+            for i, agent in enumerate(agents_data):
+                try:
+                    # ai-agent-app-main formatından agent-workflow formatına çevir
+                    converted_agent = {
+                        "id": agent.get("id", str(uuid.uuid4())),
+                        "name": agent.get("name", "Bilinmeyen Ajan"),
+                        "description": agent.get("description", "Açıklama yok"),
+                        # systemPrompt ve queryPrompt'u birleştir
+                        "prompt": f"{agent.get('systemPrompt', '')}\n\n{agent.get('queryPrompt', '')}".strip(),
+                        "type": "external",  # Dış projeden geldiğini belirtmek için
+                        "source": "ai-agent-app-main",  # Kaynağı belirt
+                        "tools": {
+                            "tool1": agent.get("tool_selection_checkboxes_tool1", False),
+                            "webSearch": agent.get("tool_selection_checkboxes_webSearch", False),
+                            "codeExecution": agent.get("tool_selection_checkboxes_codeExecution", False),
+                            "fileAnalysis": agent.get("tool_selection_checkboxes_fileAnalysis", False),
+                        }
+                    }
+                    ai_agents.append(converted_agent)
+                    logger.info(f"Ajan #{i+1} dönüştürüldü: {converted_agent['name']}")
+                    
+                except Exception as e:
+                    logger.error(f"Ajan #{i+1} dönüştürülürken hata: {str(e)}")
+                    logger.error(f"Ajan verisi: {agent}")
+                
+        else:
+            logger.warning(f"AI Agent App'den ajanlar çekilemedi. HTTP Status: {response.status_code}")
+            logger.warning(f"Yanıt içeriği: {response.text[:200]}...")
+            
+    except requests.exceptions.ConnectionError as e:
+        logger.warning(f"AI Agent App'e bağlanılamadı (http://localhost:3001). Sunucu çalışmıyor olabilir: {str(e)}")
+    except requests.exceptions.Timeout as e:
+        logger.warning(f"AI Agent App'den veri çekme işlemi zaman aşımına uğradı (10s): {str(e)}")
+    except Exception as e:
+        logger.error(f"AI Agent App'den ajanlar çekilirken beklenmeyen hata oluştu: {str(e)}")
+        logger.error(f"Hata tipi: {type(e).__name__}")
+    
+    return ai_agents
 
 
 # Örnek ajanlar
 def get_default_agents() -> List[Dict[str, Any]]:
-    """Varsayılan ajanları döndürür."""
-    return [
+    """
+    Varsayılan ajanları döndürür.
+    Hem sistem ajanlarını hem de ai-agent-app-main'den gelen ajanları birleştirir.
+    """
+    # Sistem ajanları (START, END, LOOP ve yerel ajanlar)
+    system_agents = [
         {
             "id": "START",
             "name": "START",
@@ -46,9 +117,19 @@ def get_default_agents() -> List[Dict[str, Any]]:
             "id": str(uuid.uuid4()),
             "name": "ArGe Uzmanı",
             "description": "Yenilikçi fikirler ve çözümler üreten ajan",
-            "prompt": "Sen vizyoner bir ArGe uzmanısın. Görevin, önceden araştırılmış ve derinlemesine analiz edilmiş bir konu hakkında yenilikçi fikirler, potansiyel çözümler ve gelecek uygulamalar önermektir.\n\nYanıtında şunlara odaklan:\n1. Gelecek trendleri ve yenilikçi yaklaşımlar\n2. Potansiyel uygulama alanları ve çözüm önerileri\n3. İnovasyon fırsatları ve yeni araştırma yönleri\n4. Mevcut zorluklar ve bunları aşmaya yönelik yaratıcı çözümler\n\nYaratıcı ve ileriye dönük düşün. Mevcut bilgileri genişleterek yeni fikirler ve perspektifler sun. Önerdiğin fikirler hem yaratıcı hem de uygulanabilir olmalıdır.\n\nÖnceki araştırmacı ve derin araştırmacı ajanların sağladığı bilgileri baz alarak, bunları ileriye taşıyan ve yeni perspektifler sunan öneriler geliştir. Bilgileri tekrarlama, bunun yerine yenilikçi uygulamalara ve geleceğe odaklan. Talimatlara sadık kal ve 400-700 kelimelik vizyoner bir yanıt oluştur.",
+            "prompt": "Sen vizyoner bir ArGe uzmanısın. Görevin, önceden araştırılmış ve derinlemesine analiz edilmiş bir konu hakkında yenilikçi fikireler, potansiyel çözümler ve gelecek uygulamalar önermektir.\n\nYanıtında şunlara odaklan:\n1. Gelecek trendleri ve yenilikçi yaklaşımlar\n2. Potansiyel uygulama alanları ve çözüm önerileri\n3. İnovasyon fırsatları ve yeni araştırma yönleri\n4. Mevcut zorluklar ve bunları aşmaya yönelik yaratıcı çözümler\n\nYaratıcı ve ileriye dönük düşün. Mevcut bilgileri genişleterek yeni fikirler ve perspektifler sun. Önerdiğin fikireler hem yaratıcı hem de uygulanabilir olmalıdır.\n\nÖnceki araştırmacı ve derin araştırmacı ajanların sağladığı bilgileri baz alarak, bunları ileriye taşıyan ve yeni perspektifler sunan öneriler geliştir. Bilgileri tekrarlama, bunun yerine yenilikçi uygulamalara ve geleceğe odaklan. Talimatlara sadık kal ve 400-700 kelimelik vizyoner bir yanıt oluştur.",
         },
     ]
+    
+    # AI Agent App'den gelen ajanları çek ve birleştir
+    external_agents = fetch_ai_agents_from_main_app()
+    
+    # Sistem ajanları ve external ajanları birleştir
+    all_agents = system_agents + external_agents
+    
+    logger.info(f"Toplam {len(all_agents)} ajan yüklendi: {len(system_agents)} sistem ajanı + {len(external_agents)} dış ajan")
+    
+    return all_agents
 
 
 def process_start_agent(input_text: str) -> str:
