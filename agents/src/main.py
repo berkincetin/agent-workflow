@@ -50,9 +50,6 @@ app.add_middleware(
 # In-memory veritabanı
 DB = {"users": [], "workflows": [], "agents": []}
 
-# Başlangıçta örnek ajanları ekle
-DB["agents"] = get_default_agents()
-
 
 # Kimlik doğrulama işlevi
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -122,8 +119,24 @@ async def read_users_me(current_user: dict = Depends(get_current_user)):
 # Ajan endpoint'leri
 @app.get("/agents")
 async def get_agents():
-    """Tüm ajanları listeler."""
-    return DB["agents"]
+    """
+    Tüm ajanları listeler.
+    Her çağrıda ai-agent-app-main'den fresh data çeker.
+    """
+    try:
+        # Her API çağrısında güncel ajan listesini çek
+        fresh_agents = get_default_agents()
+        
+        # Cache'i güncelle (opsiyonel, diğer işlemler için)
+        DB["agents"] = fresh_agents
+        
+        logger.info(f"Agents endpoint çağrıldı, {len(fresh_agents)} ajan döndürüldü")
+        return fresh_agents
+        
+    except Exception as e:
+        logger.error(f"Agents endpoint'inde hata oluştu: {str(e)}")
+        # Hata durumunda cached data döndür
+        return DB["agents"]
 
 
 @app.post("/agents")
