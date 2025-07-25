@@ -11,6 +11,14 @@ export interface Agent {
   name: string;
   description: string;
   prompt: string;
+  type?: string;
+  source?: string;
+  tools?: {
+    tool1?: boolean;
+    webSearch?: boolean;
+    codeExecution?: boolean;
+    fileAnalysis?: boolean;
+  };
 }
 
 export interface NodeData {
